@@ -1,24 +1,33 @@
-output "envoy_gateway_status" {
-  description = "Envoy Gateway Helm release status"
-  value       = helm_release.envoy_gateway.status
+output "nginx_ingress_status" {
+  description = "NGINX Ingress Helm release status"
+  value       = helm_release.nginx_ingress.status
 }
 
-output "istio_status" {
-  description = "Istio Helm release status"
-  value       = helm_release.istiod.status
-}
-
-output "app_gateway_external_url" {
-  description = "Application gateway external URL"
+output "app_ingress_url" {
+  description = "Application ingress URL"
   value       = "https://app.${var.domain}"
 }
 
-output "keycloak_gateway_external_url" {
-  description = "Keycloak gateway external URL"
+output "services_ingress_url" {
+  description = "Services ingress URL"
+  value       = "https://services.${var.domain}"
+}
+
+output "keycloak_ingress_url" {
+  description = "Keycloak ingress URL"
   value       = "https://auth.${var.domain}"
 }
 
-output "services_external_url" {
-  description = "Services external URL"
-  value       = "https://services.${var.domain}"
+output "ingress_class" {
+  description = "Ingress class name"
+  value       = "nginx"
+}
+
+output "ingress_controller" {
+  description = "Ingress controller information"
+  value = {
+    name      = "nginx-ingress"
+    namespace = "ingress-nginx"
+    status    = helm_release.nginx_ingress.status
+  }
 }
