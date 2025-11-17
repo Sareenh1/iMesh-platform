@@ -3,14 +3,9 @@ output "envoy_gateway_status" {
   value       = helm_release.envoy_gateway.status
 }
 
-output "app_gateway_name" {
-  description = "Application gateway name"
-  value       = "app"
-}
-
-output "keycloak_gateway_name" {
-  description = "Keycloak gateway name"
-  value       = "keycloak"
+output "istio_status" {
+  description = "Istio Helm release status"
+  value       = helm_release.istiod.status
 }
 
 output "app_gateway_external_url" {
@@ -26,9 +21,4 @@ output "keycloak_gateway_external_url" {
 output "services_external_url" {
   description = "Services external URL"
   value       = "https://services.${var.domain}"
-}
-
-output "gateway_class" {
-  description = "Gateway class name"
-  value       = "eg"
 }
