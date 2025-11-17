@@ -35,7 +35,7 @@ resource "kubernetes_namespace" "istio_system" {
   }
 }
 
-# Deploy all modules
+# Deploy modules in order
 module "certificates" {
   source = "./modules/certificates"
   
@@ -54,7 +54,10 @@ module "dependencies" {
   namespace = kubernetes_namespace.v2_deps.metadata[0].name
   keycloak_admin = var.keycloak_admin
   
-  depends_on = [kubernetes_namespace.v2_deps]
+  depends_on = [
+    kubernetes_namespace.v2_deps,
+    module.certificates
+  ]
 }
 
 module "keycloak" {
@@ -65,9 +68,7 @@ module "keycloak" {
   admin_user   = var.keycloak_admin.username
   admin_pass   = var.keycloak_admin.password
   
-  depends_on = [
-    module.dependencies
-  ]
+  depends_on = [module.dependencies]
 }
 
 module "applications" {
@@ -96,23 +97,6 @@ module "applications" {
   ]
 }
 
-module "gateways" {
-  source = "./modules/gateways"
-  
-  namespaces = {
-    v2      = kubernetes_namespace.v2.metadata[0].name
-    v2_deps = kubernetes_namespace.v2_deps.metadata[0].name
-  }
-  
-  domain = var.domain
-  
-  depends_on = [
-    module.certificates,
-    kubernetes_namespace.v2,
-    kubernetes_namespace.v2_deps
-  ]
-}
-
 module "agent" {
   source = "./modules/agent"
   
@@ -128,5 +112,26 @@ module "agent" {
   depends_on = [
     module.dependencies,
     kubernetes_namespace.v2_agent
+  ]
+}
+
+# Deploy gateways LAST after everything else is working
+module "gateways" {
+  source = "./modules/gateways"
+  
+  namespaces = {
+    v2      = kubernetes_namespace.v2.metadata[0].name
+    v2_deps = kubernetes_namespace.v2_deps.metadata[0].name
+  }
+  
+  domain = var.domain
+  
+  depends_on = [
+    module.certificates,
+    module.dependencies,
+    module.applications,
+    module.agent,
+    kubernetes_namespace.v2,
+    kubernetes_namespace.v2_deps
   ]
 }
