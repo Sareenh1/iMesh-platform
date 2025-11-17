@@ -1,24 +1,14 @@
-output "agent_service_url" {
-  description = "Agent service URL"
-  value       = "http://agent.${var.namespace}.svc.cluster.local"
+output "agent_status" {
+  description = "Agent deployment status"
+  value       = "deployed"
 }
 
 output "cluster_role_name" {
-  description = "Cluster role name for the agent"
-  value       = "imesh-agent"
+  description = "Cluster role name"
+  value       = kubernetes_cluster_role.imesh_agent.metadata[0].name
 }
 
-output "cluster_role_binding_name" {
-  description = "Cluster role binding name"
-  value       = "imesh-agent"
-}
-
-output "docker_registry_secret" {
-  description = "Name of the Docker registry secret"
-  value       = kubernetes_secret.docker_registry.metadata[0].name
-}
-
-output "agent_deployment_name" {
-  description = "Agent deployment name"
-  value       = "agent"
+output "service_account_name" {
+  description = "Service account name"
+  value       = kubernetes_service_account.agent.metadata[0].name
 }
