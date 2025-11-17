@@ -10,10 +10,3 @@ variable "domain" {
   description = "Base domain"
   type        = string
 }
-
-variable "certificates" {
-  description = "Certificate secrets"
-  type = object({
-    nats_server_cert = string
-  })
-}
