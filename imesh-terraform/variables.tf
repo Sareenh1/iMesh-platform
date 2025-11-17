@@ -24,6 +24,7 @@ variable "docker_registry" {
     password = "f82f8317aed4fd7fcad9b969350f5771aacf9f34"
     email    = "pulak.das@imesh.ai"
   }
+  sensitive = true
 }
 
 variable "keycloak_admin" {
@@ -36,40 +37,12 @@ variable "keycloak_admin" {
     username = "admin"
     password = "Wuas#CK4dr6E44YYg!d"
   }
+  sensitive = true
 }
 
-variable "keycloak_realm" {
-  description = "Keycloak realm configuration"
-  type = object({
-    name        = string
-    display_name = string
-  })
-  default = {
-    name        = "istio-manager"
-    display_name = "Istio Manager"
-  }
-}
-
-variable "keycloak_clients" {
-  description = "Keycloak clients configuration"
-  type = map(object({
-    client_id    = string
-    public_client = bool
-    redirect_uris = list(string)
-    web_origins  = list(string)
-  }))
-  default = {
-    ui = {
-      client_id    = "ui"
-      public_client = true
-      redirect_uris = ["https://app.dev.imesh.ai/*"]
-      web_origins  = ["*"]
-    }
-    graphql_backend = {
-      client_id    = "graphql-backend"
-      public_client = false
-      redirect_uris = []
-      web_origins  = []
-    }
-  }
+variable "agent_token" {
+  description = "Agent token for cluster registration"
+  type        = string
+  default     = "*BUBj0ovg/.aW1lc2guYWk="
+  sensitive   = true
 }
