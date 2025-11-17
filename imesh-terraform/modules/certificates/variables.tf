@@ -6,7 +6,12 @@ variable "namespaces" {
   })
 }
 
-variable "domains" {
-  description = "Domains for certificate generation"
-  type        = list(string)
+variable "domain" {
+  description = "Base domain"
+  type        = string
+}
+
+variable "email" {
+  description = "Email for certificate registration"
+  type        = string
 }
