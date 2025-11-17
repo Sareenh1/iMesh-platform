@@ -1,14 +1,3 @@
-resource "kubernetes_secret" "keycloak_client_secrets" {
-  metadata {
-    name      = "keycloak-client-secrets"
-    namespace = var.namespace
-  }
-
-  data = {
-    graphql-backend-secret = random_password.graphql_backend_secret.result
-  }
-}
-
 resource "random_password" "graphql_backend_secret" {
   length  = 32
   special = true
@@ -16,7 +5,7 @@ resource "random_password" "graphql_backend_secret" {
 
 resource "null_resource" "configure_keycloak" {
   triggers = {
-    keycloak_pod = kubernetes_pod.keycloak_wait.id
+    keycloak_pod = "keycloak-0" # StatefulSet pod name
   }
 
   provisioner "local-exec" {
@@ -24,9 +13,8 @@ resource "null_resource" "configure_keycloak" {
 #!/bin/bash
 set -e
 
-# Wait for Keycloak to be ready
 echo "Waiting for Keycloak to be ready..."
-kubectl wait --for=condition=ready pod -l app=keycloak -n ${var.namespace} --timeout=600s
+kubectl wait --for=condition=ready pod/keycloak-0 -n ${var.namespace} --timeout=600s
 
 # Setup port forwarding
 kubectl port-forward -n ${var.namespace} svc/keycloak 8080:80 &
@@ -42,41 +30,40 @@ TOKEN=$(curl -s -X POST \
   -d "grant_type=password" \
   -d "client_id=admin-cli" | jq -r '.access_token')
 
-# Create realm
+# Create istio-manager realm
 curl -s -X POST \
   http://localhost:8080/admin/realms \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "realm": "${var.realm_config.name}",
+    "realm": "istio-manager",
     "enabled": true,
-    "displayName": "${var.realm_config.display_name}"
+    "displayName": "Istio Manager"
   }'
 
-# Create UI client
+# Create UI client in istio-manager realm
 curl -s -X POST \
-  http://localhost:8080/admin/realms/${var.realm_config.name}/clients \
+  http://localhost:8080/admin/realms/istio-manager/clients \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "clientId": "${var.clients.ui.client_id}",
+    "clientId": "ui",
     "enabled": true,
-    "publicClient": ${var.clients.ui.public_client},
-    "redirectUris": ${jsonencode(var.clients.ui.redirect_uris)},
-    "webOrigins": ${jsonencode(var.clients.ui.web_origins)}
+    "publicClient": true,
+    "redirectUris": ["https://app.${var.domain}/*"],
+    "webOrigins": ["*"]
   }'
 
-# Create graphql-backend client
+# Create graphql-backend client in master realm
 GRAPHQL_CLIENT_ID=$(curl -s -X POST \
   http://localhost:8080/admin/realms/master/clients \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "clientId": "${var.clients.graphql_backend.client_id}",
+    "clientId": "graphql-backend",
     "enabled": true,
-    "publicClient": ${var.clients.graphql_backend.public_client},
+    "publicClient": false,
     "serviceAccountsEnabled": true,
-    "authorizationServicesEnabled": false,
     "standardFlowEnabled": false,
     "directAccessGrantsEnabled": false
   }' | jq -r '.id')
@@ -131,36 +118,5 @@ EOF
     interpreter = ["bash", "-c"]
   }
 
-  depends_on = [helm_release.dependencies]
-}
-
-resource "kubernetes_pod" "keycloak_wait" {
-  metadata {
-    name      = "keycloak-wait-helper"
-    namespace = var.namespace
-  }
-
-  spec {
-    container {
-      name    = "wait"
-      image   = "bitnami/kubectl:latest"
-      command = ["sleep", "3600"]
-    }
-
-    restart_policy = "Never"
-  }
-
-  depends_on = [helm_release.dependencies]
-}
-
-resource "helm_release" "dependencies" {
-  name       = "dependencies"
-  chart      = "dummy"
-  namespace  = var.namespace
-
-  # This is a dummy release to ensure dependencies are created
-  set {
-    name  = "dummy"
-    value = "value"
-  }
+  depends_on = [kubernetes_stateful_set.keycloak]
 }
