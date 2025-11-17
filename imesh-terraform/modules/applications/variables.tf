@@ -3,6 +3,11 @@ variable "namespace" {
   type        = string
 }
 
+variable "domain" {
+  description = "Base domain"
+  type        = string
+}
+
 variable "docker_registry" {
   description = "Docker registry credentials"
   type = object({
@@ -11,6 +16,7 @@ variable "docker_registry" {
     password = string
     email    = string
   })
+  sensitive = true
 }
 
 variable "keycloak_config" {
@@ -20,6 +26,7 @@ variable "keycloak_config" {
     realm                 = string
     graphql_client_secret = string
   })
+  sensitive = true
 }
 
 variable "dependencies" {
@@ -29,10 +36,4 @@ variable "dependencies" {
     redis_url   = string
     nats_url    = string
   })
-}
-
-variable "domain" {
-  description = "Base domain"
-  type        = string
-  default     = "dev.imesh.ai"
 }
