@@ -1,4 +1,4 @@
-# Create namespaces
+# Create namespaces first
 resource "kubernetes_namespace" "v2_deps" {
   metadata {
     name = "v2-deps"
@@ -23,42 +23,17 @@ resource "kubernetes_namespace" "cert_manager" {
   }
 }
 
-# Deploy modules in order (without gateways for now)
-module "certificates" {
-  source = "./modules/certificates"
-  
-  namespaces = {
-    v2      = kubernetes_namespace.v2.metadata[0].name
-    v2_deps = kubernetes_namespace.v2_deps.metadata[0].name
-  }
-  
-  domain = var.domain
-  email  = "pulak.das@imesh.ai"
-}
-
+# Stage 1: Dependencies only
 module "dependencies" {
   source = "./modules/dependencies"
   
   namespace = kubernetes_namespace.v2_deps.metadata[0].name
   keycloak_admin = var.keycloak_admin
   
-  depends_on = [
-    kubernetes_namespace.v2_deps,
-    module.certificates
-  ]
+  depends_on = [kubernetes_namespace.v2_deps]
 }
 
-module "keycloak" {
-  source = "./modules/keycloak"
-  
-  namespace    = kubernetes_namespace.v2_deps.metadata[0].name
-  domain       = var.domain
-  admin_user   = var.keycloak_admin.username
-  admin_pass   = var.keycloak_admin.password
-  
-  depends_on = [module.dependencies]
-}
-
+# Stage 2: Applications (after dependencies are ready)
 module "applications" {
   source = "./modules/applications"
   
@@ -69,7 +44,7 @@ module "applications" {
   keycloak_config = {
     url    = "http://keycloak.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local"
     realm  = "master"
-    graphql_client_secret = module.keycloak.graphql_backend_secret
+    graphql_client_secret = "temp-secret"  # We'll update this later
   }
   
   dependencies = {
@@ -78,13 +53,27 @@ module "applications" {
     nats_url    = "nats://nats.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local:4222"
   }
   
-  depends_on = [
-    module.dependencies,
-    module.keycloak,
-    kubernetes_namespace.v2
-  ]
+  depends_on = [module.dependencies]
 }
 
+# Stage 3: Certificates (optional for now)
+/*
+module "certificates" {
+  source = "./modules/certificates"
+  
+  namespaces = {
+    v2      = kubernetes_namespace.v2.metadata[0].name
+    v2_deps = kubernetes_namespace.v2_deps.metadata[0].name
+  }
+  
+  domain = var.domain
+  email  = "pulak.das@imesh.ai"
+  
+  depends_on = [module.dependencies]
+}
+*/
+
+# Stage 4: Agent
 module "agent" {
   source = "./modules/agent"
   
@@ -97,29 +86,13 @@ module "agent" {
     nats_url = "nats://nats.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local"
   }
   
-  depends_on = [
-    module.dependencies,
-    kubernetes_namespace.v2_agent
-  ]
+  depends_on = [module.dependencies]
 }
 
-# Comment out gateways for now to avoid provider issues
+# Skip gateways for now
 /*
 module "gateways" {
   source = "./modules/gateways"
-  
-  namespaces = {
-    v2      = kubernetes_namespace.v2.metadata[0].name
-    v2_deps = kubernetes_namespace.v2_deps.metadata[0].name
-  }
-  
-  domain = var.domain
-  
-  depends_on = [
-    module.certificates,
-    module.dependencies,
-    module.applications,
-    module.agent
-  ]
+  # ... 
 }
 */
