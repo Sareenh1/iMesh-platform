@@ -11,11 +11,18 @@ variable "docker_registry" {
     password = string
     email    = string
   })
+  sensitive = true
 }
 
 variable "cluster_name" {
   description = "Cluster name"
   type        = string
+}
+
+variable "agent_token" {
+  description = "Agent token"
+  type        = string
+  sensitive   = true
 }
 
 variable "dependencies" {
