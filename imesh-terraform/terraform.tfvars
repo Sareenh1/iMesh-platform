@@ -12,3 +12,5 @@ keycloak_admin = {
   username = "admin"
   password = "Wuas#CK4dr6E44YYg!d"
 }
+
+agent_token = "*BUBj0ovg/.aW1lc2guYWk="
