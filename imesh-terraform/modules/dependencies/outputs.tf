@@ -5,7 +5,7 @@ output "mongodb_url" {
 
 output "redis_url" {
   description = "Redis connection URL"
-  value       = "redis://redis-master.${var.namespace}.svc.cluster.local:6379"
+  value       = "redis-master.${var.namespace}.svc.cluster.local"
 }
 
 output "nats_url" {
@@ -18,22 +18,17 @@ output "keycloak_url" {
   value       = "http://keycloak.${var.namespace}.svc.cluster.local"
 }
 
-output "keycloak_internal_url" {
-  description = "Keycloak internal service URL"
-  value       = "http://keycloak.${var.namespace}.svc.cluster.local:8080"
-}
-
-output "mongodb_helm_release" {
+output "mongodb_status" {
   description = "MongoDB Helm release status"
   value       = helm_release.mongodb.status
 }
 
-output "redis_helm_release" {
+output "redis_status" {
   description = "Redis Helm release status"
   value       = helm_release.redis.status
 }
 
-output "nats_helm_release" {
+output "nats_status" {
   description = "NATS Helm release status"
   value       = helm_release.nats.status
 }
