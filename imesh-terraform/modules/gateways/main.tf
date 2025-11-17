@@ -4,6 +4,11 @@ resource "helm_release" "envoy_gateway" {
   chart      = "gateway-helm"
   namespace  = "envoy-gateway-system"
   version    = "1.5.4"
+
+  set {
+    name  = "gateway-helm.image.tag"
+    value = "v1.5.4"
+  }
 }
 
 resource "helm_release" "istio" {
@@ -25,6 +30,38 @@ resource "helm_release" "istiod" {
   }
 
   depends_on = [helm_release.istio]
+}
+
+# GatewayClass for Envoy Gateway
+resource "kubernetes_manifest" "gateway_class_eg" {
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "GatewayClass"
+    metadata = {
+      name = "eg"
+    }
+    spec = {
+      controllerName = "gateway.envoyproxy.io/gatewayclass-controller"
+    }
+  }
+
+  depends_on = [helm_release.envoy_gateway]
+}
+
+# GatewayClass for Istio
+resource "kubernetes_manifest" "gateway_class_istio" {
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "GatewayClass"
+    metadata = {
+      name = "istio"
+    }
+    spec = {
+      controllerName = "istio.io/gateway-controller"
+    }
+  }
+
+  depends_on = [helm_release.istiod]
 }
 
 # App Gateway
@@ -105,7 +142,7 @@ resource "kubernetes_manifest" "app_gateway" {
     }
   }
 
-  depends_on = [helm_release.envoy_gateway]
+  depends_on = [kubernetes_manifest.gateway_class_eg]
 }
 
 # Keycloak Gateway
@@ -158,10 +195,10 @@ resource "kubernetes_manifest" "keycloak_gateway" {
     }
   }
 
-  depends_on = [helm_release.istiod]
+  depends_on = [kubernetes_manifest.gateway_class_istio]
 }
 
-# HTTP Routes
+# UI HTTPRoute
 resource "kubernetes_manifest" "ui_route" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -185,8 +222,11 @@ resource "kubernetes_manifest" "ui_route" {
       }]
     }
   }
+
+  depends_on = [kubernetes_manifest.app_gateway]
 }
 
+# HTTP to HTTPS Redirect
 resource "kubernetes_manifest" "http_to_https_redirect" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -215,8 +255,11 @@ resource "kubernetes_manifest" "http_to_https_redirect" {
       }]
     }
   }
+
+  depends_on = [kubernetes_manifest.app_gateway]
 }
 
+# GraphQL Backend HTTPRoute
 resource "kubernetes_manifest" "graphql_backend_route" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -240,8 +283,11 @@ resource "kubernetes_manifest" "graphql_backend_route" {
       }]
     }
   }
+
+  depends_on = [kubernetes_manifest.app_gateway]
 }
 
+# NATS TCPRoute
 resource "kubernetes_manifest" "nats_tcp_route" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1alpha2"
@@ -265,8 +311,11 @@ resource "kubernetes_manifest" "nats_tcp_route" {
       }]
     }
   }
+
+  depends_on = [kubernetes_manifest.app_gateway]
 }
 
+# Keycloak HTTPRoute
 resource "kubernetes_manifest" "keycloak_http_route" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -290,8 +339,11 @@ resource "kubernetes_manifest" "keycloak_http_route" {
       }]
     }
   }
+
+  depends_on = [kubernetes_manifest.keycloak_gateway]
 }
 
+# Keycloak HTTP to HTTPS Redirect
 resource "kubernetes_manifest" "keycloak_http_to_https_redirect" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -320,4 +372,6 @@ resource "kubernetes_manifest" "keycloak_http_to_https_redirect" {
       }]
     }
   }
+
+  depends_on = [kubernetes_manifest.keycloak_gateway]
 }
