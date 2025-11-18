@@ -1,4 +1,4 @@
-# Create namespaces first
+# Create namespaces
 resource "kubernetes_namespace" "v2_deps" {
   metadata {
     name = "v2-deps"
@@ -17,13 +17,16 @@ resource "kubernetes_namespace" "v2_agent" {
   }
 }
 
+# Skip cert-manager namespace for now
+/*
 resource "kubernetes_namespace" "cert_manager" {
   metadata {
     name = "cert-manager"
   }
 }
+*/
 
-# Stage 1: Dependencies only
+# Deploy dependencies using Kubernetes manifests (no Helm)
 module "dependencies" {
   source = "./modules/dependencies"
   
@@ -33,7 +36,7 @@ module "dependencies" {
   depends_on = [kubernetes_namespace.v2_deps]
 }
 
-# Stage 2: Applications (after dependencies are ready)
+# Deploy applications
 module "applications" {
   source = "./modules/applications"
   
@@ -44,36 +47,32 @@ module "applications" {
   keycloak_config = {
     url    = "http://keycloak.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local"
     realm  = "master"
-    graphql_client_secret = "temp-secret"  # We'll update this later
+    graphql_client_secret = "temp-secret-12345"  # Temporary secret
   }
   
   dependencies = {
-    mongodb_url = "mongodb://mongodb.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local"
-    redis_url   = "redis-master.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local"
+    mongodb_url = "mongodb://mongodb.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local:27017"
+    redis_url   = "redis.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local"
     nats_url    = "nats://nats.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local:4222"
   }
   
   depends_on = [module.dependencies]
 }
 
-# Stage 3: Certificates (optional for now)
+# Skip certificates and gateways for now
 /*
 module "certificates" {
   source = "./modules/certificates"
-  
-  namespaces = {
-    v2      = kubernetes_namespace.v2.metadata[0].name
-    v2_deps = kubernetes_namespace.v2_deps.metadata[0].name
-  }
-  
-  domain = var.domain
-  email  = "pulak.das@imesh.ai"
-  
-  depends_on = [module.dependencies]
+  # ...
+}
+
+module "gateways" {
+  source = "./modules/gateways"
+  # ...
 }
 */
 
-# Stage 4: Agent
+# Deploy agent
 module "agent" {
   source = "./modules/agent"
   
@@ -83,16 +82,8 @@ module "agent" {
   agent_token = var.agent_token
   
   dependencies = {
-    nats_url = "nats://nats.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local"
+    nats_url = "nats://nats.${kubernetes_namespace.v2_deps.metadata[0].name}.svc.cluster.local:4222"
   }
   
   depends_on = [module.dependencies]
 }
-
-# Skip gateways for now
-/*
-module "gateways" {
-  source = "./modules/gateways"
-  # ... 
-}
-*/
