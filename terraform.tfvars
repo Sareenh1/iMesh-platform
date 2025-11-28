@@ -1,0 +1,7 @@
+cluster_name    = "imesh-dev"
+domain          = "dev.imesh.ai"
+docker_registry = "gcr.imesh.ai"
+docker_username = "pulak.das@imesh.ai"
+docker_password = "f82f8317aed4fd7fcad9b969350f5771aacf9f34"
+email           = "pulak.das@imesh.ai"
+storage_class   = "civo-volume"
