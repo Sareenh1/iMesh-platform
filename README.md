@@ -1,8 +1,8 @@
 # iMesh-platform
 
-terraform init
-terraform plan
-terraform apply
+# terraform init
+# terraform plan
+# terraform apply
 
 ## After deployment, you can access:
 
